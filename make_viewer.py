@@ -12,7 +12,7 @@ After running: git add index.html && git commit && git push.
 import json, re, sys, pathlib
 from datetime import datetime
 
-SRC = pathlib.Path.home()/"Library/Mobile Documents/iCloud~md~obsidian/Documents/Uni/SS26/Study Plan Tracker v5.html"
+SRC = pathlib.Path(__file__).parent/"tracker-v5.html"
 OUT = pathlib.Path(__file__).parent/"index.html"
 
 def load_done(path):

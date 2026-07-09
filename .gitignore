@@ -1,3 +1,11 @@
 # personal tick-history backups — never publish
+backups/
 ss26-tracker-backup-*.json
 ticks*.json
+
+# tracker dev versions
+tracker-v5.html
+tracker-versions/
+
+# misc
+.DS_store
