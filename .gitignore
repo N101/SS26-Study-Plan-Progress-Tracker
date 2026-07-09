@@ -1,0 +1,3 @@
+# personal tick-history backups — never publish
+ss26-tracker-backup-*.json
+ticks*.json
