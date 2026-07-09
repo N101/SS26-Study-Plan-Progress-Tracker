@@ -25,13 +25,15 @@ def load_done(path):
 if len(sys.argv) > 1:
     done, source = load_done(sys.argv[1]), sys.argv[1]
 else:
-    backups = sorted((pathlib.Path.home()/"Downloads").glob("ss26-tracker-backup-*.json"),
+    # newest backup across both the repo's backups/ and ~/Downloads (wherever the export landed)
+    search = [pathlib.Path(__file__).parent/"backups", pathlib.Path.home()/"Downloads"]
+    backups = sorted((f for d in search for f in d.glob("ss26-tracker-backup-*.json")),
                      key=lambda p: p.stat().st_mtime)
     if backups:
         done, source = load_done(backups[-1]), str(backups[-1])
     else:
         m = re.search(r"let done=(\{.*?\});", OUT.read_text())
-        if not m: sys.exit("no backup given, none in ~/Downloads, none baked in index.html")
+        if not m: sys.exit("no backup given, none in backups/ or ~/Downloads, none baked in index.html")
         done, source = json.loads(m.group(1)), "existing index.html (no backup found)"
 print("ticks from:", source)
 
