@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noah — SS26 Exam-Mode Tracker</title>
+<style>
+  :root, :root[data-theme="light"]{
+    --bg:#FBFAF7; --surface:#FFFFFF; --shell:#F3F1EA; --sunk:#EBE8DF;
+    --line:rgba(62,50,38,.09); --line-strong:rgba(62,50,38,.16);
+    --text:#33291F; --muted:#8B7D6C; --dim:#B5AB9C;
+    --accent:#B0654A; --accent-deep:#8F4E37; --accent-bg:#F4EAE4; --accent-soft:#E3CDC1;
+    --green:#4A6B4F; --green-bg:#E9EFE7; --red:#A03D34; --red-bg:#F6E7E4;
+    --glow:0 1px 2px rgba(62,50,38,.04),0 14px 40px -20px rgba(62,50,38,.2);
+    --inner-hi:inset 0 1px 0 rgba(255,255,255,.85);
+    /* sky + ridge tokens (JS shifts sky with real time of day) */
+    --sky1:#DCE9F2; --sky2:#F6EEE2; --sun:#E9B44C; --flag-std:#5B7A99; --snow:rgba(255,255,255,.92);
+    --ridge-far:#D9D2C4; --ridge-mid:#C4BAA8; --ridge-near:#A99C87; --trail:#8F8271;
+    --serif:'Newsreader','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,monospace;
+    --spring:cubic-bezier(0.32,0.72,0,1);
+  }
+  :root[data-theme="dark"]{
+    /* Campfire: deep night ground, ember-lit surfaces, firelight accent */
+    --bg:#131009; --surface:#282019; --shell:#1C1610; --sunk:#3A2E23;
+    --line:rgba(255,214,170,.13); --line-strong:rgba(255,214,170,.24);
+    --text:#F4E9DA; --muted:#C4B29D; --dim:#8A7A66;
+    --accent:#E8945A; --accent-deep:#F2B279; --accent-bg:#442B18; --accent-soft:#6B4426;
+    --green:#A4C9A5; --green-bg:#2B3A2C; --red:#E89A8C; --red-bg:#472B26;
+    --glow:0 1px 2px rgba(0,0,0,.4),0 14px 40px -18px rgba(0,0,0,.7),0 0 24px -12px rgba(232,148,90,.25);
+    --inner-hi:inset 0 1px 0 rgba(255,220,180,.08);
+    --sky1:#131A2B; --sky2:#33241D; --sun:#EDDFB0; --flag-std:#8FAFD4; --snow:rgba(238,225,200,.5);
+    --ridge-far:#3D332A; --ridge-mid:#30271D; --ridge-near:#231B12; --trail:#77644E;
+  }
+  /* Firelight breathing at the foot of the screen, dark theme only */
+  .ember{position:fixed;left:50%;bottom:-26vh;width:120vw;height:62vh;transform:translateX(-50%);
+    pointer-events:none;z-index:0;border-radius:50%;display:none;
+    background:radial-gradient(ellipse at center,rgba(240,152,80,.20),rgba(240,152,80,.07) 45%,transparent 70%);
+    animation:emberBreathe 5.5s ease-in-out infinite}
+  :root[data-theme="dark"] .ember{display:block}
+  @keyframes emberBreathe{0%,100%{opacity:.75}50%{opacity:1}}
+  @media(prefers-reduced-motion:reduce){.ember{animation:none}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;
+    padding:0 0 130px;-webkit-font-smoothing:antialiased;transition:background .6s var(--spring),color .6s var(--spring)}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+  /* ---- Expedition panorama ---- */
+  .pano-wrap{position:relative;border-bottom:1px solid var(--line);transition:background 1s var(--spring)}
+  .pano{display:block;width:100%;height:min(34vh,300px);min-height:220px}
+  .pano-head{position:relative;z-index:2;text-align:center;padding:34px 20px 6px;pointer-events:none}
+  .pano-head .kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  .pano-head h1{font-family:var(--serif);font-weight:500;font-size:clamp(24px,4vw,36px);letter-spacing:-.02em;margin:8px 0 0;line-height:1.15}
+  .pano-head h1 .em{font-style:italic;color:var(--accent)}
+  .pano-head .sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+  .peak-label{font-family:var(--mono);font-size:11px;font-weight:600;fill:var(--text)}
+  .peak-days{font-family:var(--serif);font-size:17px;font-weight:500;fill:var(--text)}
+  .peak-days.soon{fill:var(--accent)}
+  .peak-hit{cursor:pointer}
+  .peak-hit:hover .peak-days{fill:var(--accent)}
+  svg text{user-select:none}
+
+  /* ---- Shared with v2-style body ---- */
+  .sec-l{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--dim);font-weight:600;margin:0 0 12px}
+  section.blk{margin-top:40px}
+  .bezel{background:var(--shell);border:1px solid var(--line);border-radius:24px;padding:7px;box-shadow:var(--glow)}
+  .bezel>.core{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:19px 21px;box-shadow:var(--inner-hi)}
+
+  .statgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;margin-top:34px}
+  @media(max-width:768px){.statgrid{grid-template-columns:1fr}}
+  .ring-flex{display:flex;align-items:center;gap:20px}
+  .bezel.stack{display:flex;flex-direction:column}
+  .bezel.stack>.core+.core{margin-top:7px;flex:1}
+  .camp-next{display:flex;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+  .camp-next svg{flex:none}
+  .camp-next b{color:var(--fg);font-weight:600}
+  .camp-next+.camp-next{border-top:1px solid var(--line)}
+  .core.log{display:flex;flex-direction:column}
+  .core.log .camp-next{flex:1;align-items:center;padding:8px 0}
+  .camp-next span{line-height:1.6}
+  .big-ring{width:110px;height:110px;flex:0 0 auto}
+  svg.ring circle{fill:none;stroke-width:7;stroke-linecap:round}
+  svg.ring .track{stroke:var(--sunk)}
+  svg.ring .fill{stroke:var(--accent);transition:stroke-dashoffset 1.3s var(--spring)}
+  .rp{font-family:var(--serif);font-size:33px;font-weight:500;letter-spacing:-.03em;line-height:1}
+  .rl{font-size:12px;color:var(--muted);margin-top:6px;max-width:22ch}
+  .rn{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px}
+  .courses{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .course{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 15px;box-shadow:var(--inner-hi);
+    transition:transform .55s var(--spring),box-shadow .55s var(--spring)}
+  .course:hover{transform:translateY(-3px);box-shadow:var(--glow)}
+  .course .h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+  .course .cn{font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px}
+  .flag{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:3px 8px;border-radius:9999px;white-space:nowrap}
+  .flag.ok{background:var(--green-bg);color:var(--green)}
+  .flag.behind{background:var(--red-bg);color:var(--red)}
+  .flag.neutral{background:var(--sunk);color:var(--muted)}
+  .flag.done{background:var(--sunk);color:var(--dim)}
+  .pbar{height:5px;border-radius:3px;background:var(--sunk);overflow:hidden}
+  .pbar>span{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width 1s var(--spring)}
+  .course .m{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px;display:flex;justify-content:space-between}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--red);display:inline-block;flex:0 0 auto}
+
+  .panel-h{font-family:var(--serif);font-size:19px;font-weight:500;margin:0 0 3px;letter-spacing:-.015em}
+  .panel-sub{font-size:12.5px;color:var(--muted);margin:0 0 14px;max-width:60ch}
+  .nogo-list{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+  .nogo{background:var(--red-bg);color:var(--red);border-radius:9999px;padding:5px 9px 5px 14px;font-size:12px;display:flex;align-items:center;gap:9px;font-weight:600}
+  .nogo .x{cursor:pointer;opacity:.5;font-size:15px;line-height:1;transition:opacity .3s}
+  .nogo .x:hover{opacity:1}
+  .checkin{display:flex;gap:9px;flex-wrap:wrap}
+  .checkin input[type=text]{flex:1;min-width:190px;background:var(--sunk);border:1px solid var(--line);color:var(--text);
+    border-radius:9999px;padding:11px 17px;font-size:13px;font-family:var(--sans);transition:border-color .4s var(--spring)}
+  .checkin input[type=text]::placeholder{color:var(--dim)}
+  .checkin input[type=text]:focus{outline:none;border-color:var(--accent)}
+  .btn{cursor:pointer;font-family:var(--sans);border:1px solid var(--line);background:var(--surface);color:var(--text);
+    border-radius:9999px;padding:10px 17px;font-size:12.5px;font-weight:600;
+    transition:transform .45s var(--spring),border-color .45s var(--spring)}
+  .btn:hover{border-color:var(--accent-soft)}
+  .btn:active{transform:scale(.96)}
+  .btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .catchlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;max-height:270px;overflow:auto}
+  .catchlist li{display:flex;gap:11px;align-items:flex-start;font-size:13px;background:var(--sunk);border-radius:12px;padding:9px 13px;
+    transition:opacity .45s var(--spring),transform .45s var(--spring)}
+  .catchlist li.clearing{opacity:0;transform:translateX(10px)}
+  .catchlist .cdate{font-family:var(--mono);color:var(--red);font-weight:600;font-size:10.5px;flex:0 0 auto;min-width:50px;margin-top:2px}
+  .empty{color:var(--dim);font-size:13px;font-style:italic}
+  .ccb{width:18px;height:18px;border:1.5px solid var(--dim);border-radius:6px;background:transparent;cursor:pointer;
+    flex:0 0 auto;margin-top:2px;padding:0;position:relative;
+    transition:background .35s var(--spring),border-color .35s var(--spring)}
+  .ccb:hover{border-color:var(--accent)}
+  .ccb::after{content:"";position:absolute;left:4.5px;top:1.5px;width:4.5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;
+    transform:rotate(45deg) scale(0);transition:transform .35s var(--spring)}
+  .ccb.on{background:var(--accent);border-color:var(--accent)}
+  .ccb.on::after{transform:rotate(45deg) scale(1)}
+
+  /* Day cards (v2 double-bezel) */
+  .phase-h{font-family:var(--serif);font-size:21px;font-weight:500;margin:46px 0 2px;letter-spacing:-.018em}
+  .phase-h .em{font-style:italic;color:var(--accent)}
+  .phase-sub{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:16px}
+  .days{display:flex;flex-direction:column;gap:12px}
+  .day-shell{background:var(--shell);border:1px solid var(--line);border-radius:21px;padding:6px;
+    transition:box-shadow .6s var(--spring),opacity .6s var(--spring),border-color .6s var(--spring)}
+  .day-shell:hover{box-shadow:var(--glow)}
+  .day-shell.past{opacity:.6}
+  .day-shell.today{border-color:var(--accent-soft);box-shadow:0 14px 44px -20px color-mix(in srgb,var(--accent) 45%,transparent)}
+  .day{background:var(--surface);border:1px solid var(--line);border-radius:15px;overflow:hidden;box-shadow:var(--inner-hi)}
+  .day-shell.exam .day{box-shadow:var(--inner-hi),inset 3px 0 0 var(--accent-soft)}
+  .day-shell.power .day{box-shadow:var(--inner-hi),inset 3px 0 0 var(--accent)}
+  .dh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 17px;cursor:pointer;user-select:none;
+    transition:background .4s var(--spring)}
+  .dh:hover{background:var(--sunk)}
+  .day-shell.today .dh{background:var(--accent-bg)}
+  .dh .dl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .dh .dow{font-family:var(--mono);font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .dh .dnum{font-family:var(--serif);font-weight:500;font-size:16.5px}
+  .badge{font-size:8.5px;font-weight:700;letter-spacing:.13em;padding:3px 10px;border-radius:9999px;text-transform:uppercase}
+  .badge.today{background:var(--accent);color:var(--bg)}
+  .badge.exam{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-soft)}
+  .badge.rest{background:var(--sunk);color:var(--muted)}
+  .badge.power{background:var(--accent);color:var(--bg)}
+  .dh .dp{font-family:var(--mono);font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .db{padding:3px 17px 15px}
+  .blk-l{font-size:9.5px;font-weight:700;letter-spacing:.13em;color:var(--dim);text-transform:uppercase;margin:11px 0 4px;display:flex;gap:9px;align-items:center}
+  .chip{font-size:9.5px;padding:2px 9px;border-radius:9999px;background:var(--sunk);color:var(--muted);font-weight:600;letter-spacing:.03em;text-transform:none}
+  .chip.exam{background:var(--accent-bg);color:var(--accent)}
+  .gchip{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);
+    border:1px solid var(--accent-soft);padding:1px 8px;border-radius:9999px;margin-right:7px;white-space:nowrap;vertical-align:1px}
+  .task{display:flex;gap:12px;align-items:flex-start;padding:6px 8px;border-radius:10px;transition:background .3s var(--spring)}
+  .task:hover{background:var(--sunk)}
+  .task .cb{width:19px;height:19px;flex:0 0 auto;margin-top:2px;border:1.5px solid var(--dim);border-radius:7px;cursor:pointer;
+    position:relative;background:transparent;padding:0;transition:background .35s var(--spring),border-color .35s var(--spring)}
+  .task .cb:hover{border-color:var(--accent)}
+  .task .cb::after{content:"";position:absolute;left:5px;top:2px;width:4.5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;
+    transform:rotate(45deg) scale(0);transition:transform .35s var(--spring)}
+  .task.done .cb{background:var(--accent);border-color:var(--accent)}
+  .task.done .cb::after{transform:rotate(45deg) scale(1)}
+  .task label{font-size:13.5px;cursor:pointer;flex:1;transition:color .35s var(--spring)}
+  .task.done label{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+  .task .exam-t{font-weight:600}
+
+  .toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 8px}
+  footer{margin-top:56px;color:var(--dim);font-size:11px;text-align:center;line-height:1.9}
+  footer code{font-family:var(--mono);background:var(--sunk);padding:1px 7px;border-radius:5px}
+
+  .dock{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:4px;
+    background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(16px) saturate(1.5);
+    border:1px solid var(--line-strong);border-radius:9999px;padding:6px;box-shadow:var(--glow)}
+  .dock .d-btn{border:none;background:transparent;color:var(--text);font-family:var(--sans);font-size:12.5px;font-weight:600;
+    padding:9px 15px;border-radius:9999px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;
+    transition:background .35s var(--spring),transform .35s var(--spring)}
+  .dock .d-btn:hover{background:var(--sunk)}
+  .dock .d-btn:active{transform:scale(.95)}
+  .dock .d-btn.hot{background:var(--accent);color:var(--bg)}
+  .dock .d-btn.hot:hover{background:var(--accent-deep)}
+  .dock .d-sep{width:1px;height:20px;background:var(--line-strong)}
+  .dock .d-pct{font-family:var(--mono);font-size:11px;color:var(--muted);padding:0 10px;font-variant-numeric:tabular-nums}
+  .dock svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  @media(max-width:600px){.wrap{padding:0 16px}.dock .d-pct{display:none}}
+
+  .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--text);color:var(--bg);
+    padding:11px 20px;border-radius:9999px;font-size:13px;opacity:0;transition:all .6s var(--spring);z-index:50;box-shadow:var(--glow)}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .rv{opacity:0;transform:translateY(18px);transition:opacity .85s var(--spring),transform .85s var(--spring)}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}*{animation:none!important}}
+
+  /* --- read-only viewer --- */
+  .task .cb,.ccb{pointer-events:none}
+  .blk:has(#nogoList){display:none}
+  #exportBtn,#importBtn,#collapsePast,#expandAll{display:none}
+  .checkin{display:none}
+</style>
+</head>
+<body>
+
+<div class="ember" aria-hidden="true"></div>
+<div class="pano-wrap">
+  <div class="pano-head">
+    <div class="kicker">Noah's expedition · Jul 6 to Aug 7 · read-only</div>
+    <h1 id="heroNext"></h1>
+    <div class="sub" id="clock"></div>
+  </div>
+  <svg class="pano" id="pano" viewBox="0 0 1000 340" preserveAspectRatio="xMidYMax slice" aria-label="Exam season shown as a mountain range; each peak is one exam"></svg>
+</div>
+
+<div class="wrap">
+  <div class="statgrid">
+    <div class="bezel rv stack">
+      <div class="core">
+        <div class="ring-flex">
+          <svg class="big-ring ring" viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"></circle><circle class="fill" id="bigRing" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"></circle></svg>
+          <div><div class="rp" id="bigPct">0%</div><div class="rl">of the trail behind you</div><div class="rn" id="bigN"></div></div>
+        </div>
+      </div>
+      <div class="core log">
+        <p class="sec-l">Expedition log</p>
+        <div class="camp-next" id="pace"></div>
+        <div class="camp-next" id="campNext"></div>
+      </div>
+    </div>
+    <div class="bezel rv"><div class="core">
+      <p class="sec-l">Course progress</p>
+      <div class="courses" id="courses"></div>
+    </div></div>
+  </div>
+
+  <section class="blk rv">
+    <div class="bezel"><div class="core">
+      <h3 class="panel-h">No-go list</h3>
+      <p class="panel-sub">Logged distractions, off-limits during study blocks. Add what pulled you off task at the end of each day.</p>
+      <div class="nogo-list" id="nogoList"></div>
+      <div class="checkin">
+        <input type="text" id="nogoInput" placeholder="What pulled you off task today?">
+        <button class="btn primary" id="nogoAdd">Log it</button>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="blk rv">
+    <div class="bezel"><div class="core" id="catchupPanel"></div></div>
+  </section>
+
+  <section class="blk">
+    <p class="sec-l rv">The route, day by day</p>
+    <div class="toolbar rv">
+      <button class="btn" id="collapsePast">Collapse past</button>
+      <button class="btn" id="expandAll">Expand all</button>
+      <button class="btn" id="exportBtn">Export backup</button>
+      <button class="btn" id="importBtn">Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+    </div>
+    <div id="plan"></div>
+  </section>
+
+  <footer>
+    Progress saved locally in this browser · Export regularly to back it up.<br>
+    Canonical plan: <code>SS26/Study Plan.md</code> · v5 "Expedition" · import a backup to carry ticks across versions.
+  </footer>
+</div>
+
+<div class="dock">
+  <button class="d-btn hot" id="jumpToday"><svg id="todayArrow" viewBox="0 0 24 24" style="transition:transform .5s var(--spring)"><path d="M12 4v13M6 12l6 6 6-6"/></svg>Today</button>
+  <span class="d-sep"></span>
+  <span class="d-pct" id="dockPct"></span>
+  <span class="d-sep"></span>
+  <button class="d-btn" id="themeBtn" aria-label="Toggle theme">
+    <svg id="iconSun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/></svg>
+    <svg id="iconMoon" viewBox="0 0 24 24" style="display:none"><path d="M20.2 14.2A8.3 8.3 0 0 1 9.8 3.8a8.3 8.3 0 1 0 10.4 10.4Z"/></svg>
+  </button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- PLAN DATA (injected) ---------- */
+const COURSES = {
+  BILHR:  {name:"BILHR",         retake:false},
+  CogSys: {name:"CogSys",        retake:true},
+  FFM:    {name:"FFM",           retake:true},
+  I2DL:   {name:"I2DL",          retake:false},
+  Robo:   {name:"Roboterdynamik",retake:false},
+  CV:     {name:"3D CV",         retake:true},
+};
+
+const EXAMS = [
+  {course:"BILHR presentation", date:"2026-07-07T10:00", noretake:false},
+  {course:"BILHR oral",         date:"2026-07-14T11:45", noretake:true},
+  {course:"CogSys",             date:"2026-07-23T11:00", noretake:false},
+  {course:"FFM",                date:"2026-07-27T16:00", noretake:false},
+  {course:"I2DL",               date:"2026-07-29T08:30", noretake:true},
+  {course:"Roboterdynamik",     date:"2026-08-04T14:00", noretake:true},
+  {course:"3D CV",              date:"2026-08-07T17:00", noretake:false},
+];
+
+const PHASES = [
+  {title:"Phase 1 — Presentation crunch", sub:"Jul 6–7", days:[
+    {date:"2026-07-06", badge:null, blocks:[
+      {label:"AM", chip:"BILHR", tasks:[["BILHR","Build presentation slides (structure paper into an 8-min narrative)"]]},
+      {label:"PM", chip:"BILHR", tasks:[["BILHR","Write speaker script, cut ruthlessly to time"]]},
+      {label:"Eve", chip:"BILHR", tasks:[["BILHR","Rehearse ×2, time each run, adjust"]]},
+    ]},
+    {date:"2026-07-07", badge:"exam", blocks:[
+      {label:"Early AM", chip:"BILHR", tasks:[["BILHR","Final rehearsal before 10:00"]]},
+      {label:"10:00", chip:"EXAM", tasks:[["BILHR","Deliver presentation (8 min + 2 min Q&A)"]]},
+      {label:"PM", chip:"BILHR", tasks:[["BILHR","Begin the oral question bank: open Exam Question list, mark gaps, log every question-style hint the prof dropped"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","Kickoff: skim syllabus, L1 (new), start a running formula-sheet doc"]]},
+    ]},
+  ]},
+  {title:"Phase 2 — BILHR oral + heavy-course kickoff", sub:"Jul 8–14 · no retake", days:[
+    {date:"2026-07-08", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","Recap L1, L2 content (new)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","L1 recap (have), L2 content (new)"]]},
+      {label:"Eve", chip:"BILHR", tasks:[["BILHR","Build question bank from L1–3 slides; draft answers for weakest areas (revisit)"]]},
+    ]},
+    {date:"2026-07-09", badge:null, blocks:[
+      {label:"AM", chip:"BILHR", tasks:[["BILHR","Comb L4 (CMAC) & L5 (basal ganglia) slides; extract likely questions + answers (revisit)"]]},
+      {label:"PM", chip:"I2DL", tasks:[["I2DL","Pull last semester's notes/summary, diff vs this semester's syllabus, list gaps (revisit)"]]},
+      {label:"Eve", chip:"BILHR", tasks:[["BILHR","Comb L6 (RL) & L7 slides; extract questions (revisit)"]]},
+    ]},
+    {date:"2026-07-10", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","L3 content (new) + first practice problems"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","L3 content (new)"]]},
+      {label:"Eve", chip:"BILHR", tasks:[["BILHR","Consolidate the full question bank; rehearse answers aloud (revisit)"]]},
+    ]},
+    {date:"2026-07-11", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","L4 content (new) + practice problems"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","L4–5 content (2 new)"]]},
+      {label:"Eve", chip:"BILHR", tasks:[["BILHR","Pool everyone's notes + the prof's hints, collectively complete the question bank, compare expected question styles/format",{group:true}]]},
+    ]},
+    {date:"2026-07-12", badge:"rest", blocks:[
+      {label:"Light / Rest", chip:"BILHR", tasks:[["BILHR","Passive review of the question bank only; rest otherwise"]]},
+    ]},
+    {date:"2026-07-13", badge:null, blocks:[
+      {label:"AM", chip:"BILHR", tasks:[["BILHR","Mock oral: quiz each other through all question areas, simulate the 15–20 min / 10-question format",{group:true}]]},
+      {label:"PM", chip:"BILHR", tasks:[["BILHR","Patch weak spots from the mock; tighten shaky answers"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L5 content (new), light"]]},
+    ]},
+    {date:"2026-07-14", badge:"exam", blocks:[
+      {label:"Early AM", chip:"BILHR", tasks:[["BILHR","Final consolidation, weak spots only, no new material"]]},
+      {label:"11:45", chip:"EXAM", tasks:[["BILHR","BILHR oral exam (no retake)"]]},
+      {label:"PM", chip:"—", tasks:[["BILHR","Rest / decompress (light CogSys only if energy remains)"]]},
+    ]},
+  ]},
+  {title:"Phase 3 — CogSys primary", sub:"Jul 15–23 · retake Sep 28", days:[
+    {date:"2026-07-15", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","L6–7 content (2 new)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Tutorials / exercises on L1–7 (practice)"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L6 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-07-16", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","L8–9 content (2 new)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Exercises / tutorials (practice)"]]},
+      {label:"Eve", chip:"FFM", tasks:[["FFM","Keep-warm: one past-exam problem or exercise sheet"]]},
+    ]},
+    {date:"2026-07-17", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","L10–11 content (2 new)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Exercises (practice)"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L7 content (new) + a practice problem"]]},
+    ]},
+    {date:"2026-07-18", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","L12–13 content (2 new) — content complete"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Past exams (if available) / consolidate summary (practice)"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","Practice problems (revisit)"]]},
+    ]},
+    {date:"2026-07-19", badge:"rest", blocks:[
+      {label:"Light / Rest", chip:"CogSys", tasks:[["CogSys","Light review of summary / weak topics only"]]},
+    ]},
+    {date:"2026-07-20", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","Past exams (practice)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Work past exams together, thrash out the conceptual / derivation-heavy topics",{group:true}]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L8 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-07-21", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","Past exams, timed (practice)"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Review mistakes, build concept/formula sheet"]]},
+      {label:"Eve", chip:"FFM", tasks:[["FFM","Keep-warm: exercise sheet / past-exam problem"]]},
+    ]},
+    {date:"2026-07-22", badge:null, blocks:[
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","Final past-exam / weak spots"]]},
+      {label:"PM", chip:"CogSys", tasks:[["CogSys","Memory consolidation, cheat-sheet review"]]},
+      {label:"Eve", chip:"CogSys", tasks:[["CogSys","Flashcards, early night"]]},
+    ]},
+    {date:"2026-07-23", badge:"exam", blocks:[
+      {label:"Early AM", chip:"CogSys", tasks:[["CogSys","Final review"]]},
+      {label:"11:00", chip:"EXAM", tasks:[["CogSys","CogSys exam"]]},
+      {label:"PM", chip:"FFM", tasks:[["FFM","Pivot: fill Lecture 10 (new) + start the formula sheet"]]},
+    ]},
+  ]},
+  {title:"Phase 4 — FFM then I2DL", sub:"Jul 24–29", days:[
+    {date:"2026-07-24", badge:null, blocks:[
+      {label:"AM", chip:"FFM", tasks:[["FFM","Build formula sheet Part I (transformers, tokenizers, scaling laws) — active recall across L1–7 (revisit)"]]},
+      {label:"PM", chip:"FFM", tasks:[["FFM","Build formula sheet Part II (distributed computing L8–9) + Part III (vision: CLIP, diffusion L11–12); prioritise weak L2, 6, 8 (revisit)"]]},
+      {label:"Eve", chip:"I2DL", tasks:[["I2DL","Refresh from autoencoders onward, skim summary (revisit)"]]},
+    ]},
+    {date:"2026-07-25", badge:null, blocks:[
+      {label:"AM", chip:"FFM", tasks:[["FFM","Exercises / tutorials (BPE, MoEs, scaling) (practice)"]]},
+      {label:"PM", chip:"FFM", tasks:[["FFM","Swap formula sheets, work past-exam / exercise sheets together, close each other's gaps",{group:true}]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L9 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-07-26", badge:"rest", blocks:[
+      {label:"Light", chip:"FFM", tasks:[["FFM","Refine formula sheet, drill only weak topics; rest"]]},
+    ]},
+    {date:"2026-07-27", badge:"exam", blocks:[
+      {label:"AM", chip:"FFM", tasks:[["FFM","Final review via the formula sheet; memorise what can't fit on it"]]},
+      {label:"16:00", chip:"EXAM", tasks:[["FFM","FFM exam"]]},
+      {label:"Eve", chip:"I2DL", tasks:[["I2DL","Pivot fully: exercises 8–12 (practice)"]]},
+    ]},
+    {date:"2026-07-28", badge:null, blocks:[
+      {label:"AM", chip:"I2DL", tasks:[["I2DL","Review core (backprop, CNNs, RNNs, transformers) from summary (revisit)"]]},
+      {label:"PM", chip:"I2DL", tasks:[["I2DL","Past exams + coding exercises (practice)"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","L10 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-07-29", badge:"exam", blocks:[
+      {label:"Early AM", chip:"I2DL", tasks:[["I2DL","Final review, weak spots"]]},
+      {label:"08:30", chip:"EXAM", tasks:[["I2DL","I2DL exam (no retake)"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","L11 content (new)"]]},
+      {label:"Eve", chip:"—", tasks:[["Robo","Rest / decompress"]]},
+    ]},
+  ]},
+  {title:"Phase 5 — Roboterdynamik full push", sub:"Jul 30–Aug 4 · no retake, highest risk", days:[
+    {date:"2026-07-30", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","L12–13 content (2 new) — content complete"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","Practice problems (Lagrangian / dynamics) (practice)"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","Kickoff: syllabus + L1 refresh (have), map the topic list (revisit)"]]},
+    ]},
+    {date:"2026-07-31", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","Practice problems (practice)"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","Practice problems / derivations (practice)"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","L2 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-08-01", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","Past exams (practice)"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","Work past-exam problems & derivations together (math course — high group payoff)",{group:true}]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","L3 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-08-02", badge:"rest", blocks:[
+      {label:"Light", chip:"Robo", tasks:[["Robo","Light review, formula-sheet memorization; rest"]]},
+    ]},
+    {date:"2026-08-03", badge:null, blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","Past exams, timed (practice)"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","Weak-topic drilling, formula recall"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","L4 content (new), keep-warm"]]},
+    ]},
+    {date:"2026-08-04", badge:"exam", blocks:[
+      {label:"AM", chip:"Robo", tasks:[["Robo","Final review, formula sheet"]]},
+      {label:"14:00", chip:"EXAM", tasks:[["Robo","Roboterdynamik exam (no retake)"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","L5–6 content (2 new)"]]},
+    ]},
+  ]},
+  {title:"Phase 6 — 3D CV sprint", sub:"Aug 5–7 · retake Oct 6", days:[
+    {date:"2026-08-05", badge:"power", blocks:[
+      {label:"AM", chip:"CV", tasks:[["CV","L7–8 content (2 new): multiview reconstruction, super-resolution"]]},
+      {label:"PM", chip:"CV", tasks:[["CV","L9–10 content (2 new): free-viewpoint, realtime dense scanning"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","Tutorial exercises on L1–10 (practice)"]]},
+    ]},
+    {date:"2026-08-06", badge:null, blocks:[
+      {label:"AM", chip:"CV", tasks:[["CV","L11–13 content (3 new): Visual SLAM, deep networks for SLAM"]]},
+      {label:"PM", chip:"CV", tasks:[["CV","Tutorial exercises + past exams (if available) (practice)"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","Weak-topic review / consolidate"]]},
+    ]},
+    {date:"2026-08-07", badge:"exam", blocks:[
+      {label:"AM", chip:"CV", tasks:[["CV","Past exams / final review (practice)"]]},
+      {label:"PM", chip:"CV", tasks:[["CV","Final review until 17:00"]]},
+      {label:"17:00", chip:"EXAM", tasks:[["CV","3D CV exam — done"]]},
+    ]},
+  ]},
+];
+
+
+/* ---------- STATE ---------- */
+const LS_TASKS="ss26_tasks_v1", LS_NOGO="ss26_nogo_v1", LS_UI="ss26_ui_v1";
+let done={"2026-07-06|0|0":true,"2026-07-06|1|0":true,"2026-07-06|2|0":true,"2026-07-07|0|0":true,"2026-07-07|1|0":true,"2026-07-08|0|0":true,"2026-07-08|1|0":true,"2026-07-08|2|0":true,"2026-07-07|2|0":true,"2026-07-07|3|0":true};
+let nogo=[];
+let ui={};
+const save=()=>{};
+const saveNogo=()=>{};
+const saveUI=()=>{};
+
+/* ---------- THEME ---------- */
+function applyTheme(){
+  const t=ui.theme||"light";
+  document.documentElement.setAttribute("data-theme",t);
+  document.getElementById("iconSun").style.display=t==="light"?"":"none";
+  document.getElementById("iconMoon").style.display=t==="dark"?"":"none";
+  renderPano();
+}
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  ui.theme=(ui.theme==="dark")?"light":"dark"; saveUI(); applyTheme();
+});
+
+/* ---------- HELPERS ---------- */
+const WEEK=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function parseD(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);}
+function dayDelta(a,b){return Math.round((parseD(a)-parseD(b))/864e5);}
+function tid(d,b,t){return d+"|"+b+"|"+t;}
+function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+const TODAY=todayStr();
+const ALL=[];
+PHASES.forEach(p=>p.days.forEach(d=>d.blocks.forEach((b,bi)=>b.tasks.forEach((t,ti)=>ALL.push({id:tid(d.date,bi,ti),date:d.date,course:t[0],text:t[1],isExam:b.chip==="EXAM"})))));
+
+/* ---------- SKY (real time of day) ---------- */
+function skyPhase(){
+  const h=new Date().getHours()+new Date().getMinutes()/60;
+  if(h>=5&&h<8)  return {s1:"#F2D8C8",s2:"#FBEFDD",sun:"#E58E5A",alt:.25};           // dawn
+  if(h>=8&&h<17) return {s1:"#DCE9F2",s2:"#F6EEE2",sun:"#E9B44C",alt:.85};           // day
+  if(h>=17&&h<21)return {s1:"#E8C8B4",s2:"#F3E3D2",sun:"#D97B4F",alt:.3};            // dusk
+  return {s1:"#1B2233",s2:"#3A2E33",sun:"#EDE3BD",alt:.7,night:true};                // night
+}
+
+/* ---------- EXPEDITION PANORAMA ---------- */
+const RANGE_START=parseD("2026-07-06"), RANGE_END=parseD("2026-08-07");
+const SPAN=(RANGE_END-RANGE_START)/864e5;
+function xOf(dateStr){return 60+((parseD(dateStr)-RANGE_START)/864e5)/SPAN*880;}
+// peak heights ~ course weight/stakes (taller = bigger climb)
+const PEAKS=[
+  {date:"2026-07-07",label:"Talk",  exam:"BILHR presentation",full:"BILHR presentation",h:70, nr:false},
+  {date:"2026-07-14",label:"BILHR", exam:"BILHR oral",        full:"BILHR oral",        h:140,nr:true},
+  {date:"2026-07-23",label:"CogSys",exam:"CogSys",            full:"Cognitive Systems", h:150,nr:false},
+  {date:"2026-07-27",label:"FFM",   exam:"FFM",               full:"Foundation Models", h:130,nr:false},
+  {date:"2026-07-29",label:"I2DL",  exam:"I2DL",              full:"Intro to Deep Learning",h:145,nr:true},
+  {date:"2026-08-04",label:"Robo",  exam:"Roboterdynamik",    full:"Roboterdynamik",    h:175,nr:true},
+  {date:"2026-08-07",label:"3D CV", exam:"3D CV",             full:"3D Computer Vision",h:195,nr:false},
+];
+/* Every plan day, in order, with its task ids — the terrain is generated from this. */
+const DAYS=[];
+PHASES.forEach(p=>p.days.forEach(d=>{
+  const ids=[];d.blocks.forEach((b,bi)=>b.tasks.forEach((t,ti)=>ids.push(tid(d.date,bi,ti))));
+  DAYS.push({date:d.date,badge:d.badge,ids});
+}));
+function smoothRidge(pts,base,W){
+  // silhouette fill under a crest polyline (used for the smooth backdrop ridges)
+  let d=`M -20 ${base} L -20 ${pts[0].y+16}`;
+  let prev={x:-20,y:pts[0].y+16};
+  pts.forEach(p=>{d+=` Q ${(prev.x+p.x)/2} ${Math.max(prev.y,p.y)+14} ${p.x} ${p.y}`;prev=p;});
+  d+=` Q ${(prev.x+W+20)/2} ${prev.y+20} ${W+20} ${prev.y+26} L ${W+20} ${base} Z`;
+  return d;
+}
+function segD(a,b){
+  // one day's stretch of the route: gentle sag between the two crest points
+  return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} Q ${((a.x+b.x)/2).toFixed(1)} ${(Math.max(a.y,b.y)+3).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+}
+let panoDrawn=false;
+function renderPano(){
+  const svg=document.getElementById("pano");
+  const VBH=260, BASE=204, HSCALE=0.62, CAMP_Y=BASE-18;
+  const rect=svg.getBoundingClientRect();
+  const W=Math.max(600,Math.round(rect.width/Math.max(rect.height,1)*VBH));
+  svg.setAttribute("viewBox",`0 0 ${W} ${VBH}`);
+  svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+  const MARGIN=Math.max(46,W*0.05);
+  const px_=d=>MARGIN+((parseD(d)-RANGE_START)/864e5)/SPAN*(W-2*MARGIN);
+
+  const sky=skyPhase();
+  const now=new Date();
+  const isDark=(ui.theme==="dark");
+  const s1=isDark?"#151B2A":sky.s1, s2=isDark?"#2A2029":sky.s2, sunC=isDark?"#EDE3BD":sky.sun;
+  const night=isDark||sky.night;
+  document.querySelector(".pano-wrap").style.background=`linear-gradient(180deg,${s1},${s2})`;
+
+  const h=now.getHours()+now.getMinutes()/60;
+  const dayFrac=Math.min(Math.max((h-6)/16,0),1);
+  const sunX=MARGIN+dayFrac*(W-2*MARGIN), sunY=46+Math.sin(dayFrac*Math.PI)*-24+24;
+  let stars="";
+  if(night){let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+    for(let i=0;i<50;i++){stars+=`<circle cx="${(rnd()*W).toFixed(0)}" cy="${(rnd()*110).toFixed(0)}" r="${(rnd()*1.1+.3).toFixed(1)}" fill="#EDE3BD" opacity="${(rnd()*.5+.2).toFixed(2)}"/>`;}}
+
+  /* ---- Terrain PROFILE: one crest point per plan day ---- */
+  const anchorY={};  // day index -> anchored elevation
+  DAYS.forEach((d,i)=>{
+    const peak=PEAKS.find(p=>p.date===d.date);
+    if(peak) anchorY[i]=BASE-peak.h*HSCALE;
+    else if(d.badge==="rest") anchorY[i]=CAMP_Y;
+    else if(d.badge==="power"){ // steep shoulder before the next summit
+      const nextPeak=PEAKS.find(p=>parseD(p.date)>parseD(d.date));
+      anchorY[i]=nextPeak?BASE-(nextPeak.h*HSCALE)*0.72:BASE-80;
+    }
+  });
+  const aIdx=Object.keys(anchorY).map(Number).sort((a,b)=>a-b);
+  const PROFILE=DAYS.map((d,i)=>{
+    let y;
+    if(anchorY[i]!=null) y=anchorY[i];
+    else{
+      const prev=[...aIdx].reverse().find(k=>k<i), next=aIdx.find(k=>k>i);
+      if(prev==null) y=anchorY[next]+14;
+      else if(next==null) y=anchorY[prev]+14;
+      else{const f=(i-prev)/(next-prev); y=anchorY[prev]+(anchorY[next]-anchorY[prev])*f;}
+      // deterministic jitter so slopes aren't ruler-straight (never on anchors)
+      const j=((i*9301+49297)%233280)/233280;
+      y+=(j-.5)*8;
+      y=Math.min(y,CAMP_Y);  // never below the camps
+    }
+    return {x:px_(d.date),y,day:d,idx:i};
+  });
+  // give every summit a little prominence: neighbours (non-anchor) sit at least 9px lower
+  DAYS.forEach((d,i)=>{
+    if(!PEAKS.find(p=>p.date===d.date))return;
+    [i-1,i+1,i-2,i+2].forEach(j=>{
+      if(anchorY[j]!=null||!PROFILE[j])return;
+      const min=PROFILE[i].y+(Math.abs(j-i)===1?9:5);
+      PROFILE[j].y=Math.max(PROFILE[j].y,min);
+    });
+  });
+
+  /* backdrop ridges stay smooth abstractions of the exam peaks */
+  const peakPts=PEAKS.map(p=>({x:px_(p.date),y:BASE-p.h*HSCALE}));
+  const farPts=peakPts.map(p=>({x:p.x-30,y:BASE-((BASE-p.y)*.34)-10}));
+  const midPts=peakPts.map(p=>({x:p.x+22,y:BASE-((BASE-p.y)*.52)-2}));
+
+  /* main silhouette follows the day-resolution PROFILE */
+  let mainD=`M -20 ${BASE} L -20 ${PROFILE[0].y+12} Q ${(MARGIN-20+PROFILE[0].x)/2} ${PROFILE[0].y+8} ${PROFILE[0].x} ${PROFILE[0].y}`;
+  for(let i=0;i<PROFILE.length-1;i++) mainD+=" "+segD(PROFILE[i],PROFILE[i+1]).replace(/^M [\d.]+ [\d.]+ /,"");
+  const last=PROFILE[PROFILE.length-1];
+  mainD+=` Q ${(last.x+W+20)/2} ${last.y+16} ${W+20} ${last.y+24} L ${W+20} ${BASE} Z`;
+
+  let g=`${stars}
+  ${night
+    ? `<circle cx="${sunX}" cy="${sunY}" r="14" fill="${sunC}"/><circle cx="${sunX+6}" cy="${sunY-3}" r="12" fill="${s1}"/>`
+    : `<circle cx="${sunX}" cy="${sunY}" r="15" fill="${sunC}" opacity=".9"/><circle cx="${sunX}" cy="${sunY}" r="27" fill="${sunC}" opacity=".14"/>`}
+  <defs><linearGradient id="hazeG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="${s1}" stop-opacity="0"/>
+    <stop offset="1" stop-color="${s2}" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <g id="ridgeFar"><path d="${smoothRidge(farPts,BASE,W)}" fill="var(--ridge-far)"/></g>
+  <rect x="0" y="0" width="${W}" height="${BASE}" fill="url(#hazeG)"/>
+  <g id="ridgeMid"><path d="${smoothRidge(midPts,BASE,W)}" fill="var(--ridge-mid)"/></g>
+  <path d="${mainD}" fill="var(--ridge-near)"/>`;
+
+  /* snowcaps on the no-retake summits — hug the actual crest slopes on both sides */
+  PEAKS.filter(p=>p.nr).forEach(p=>{
+    const i=DAYS.findIndex(d=>d.date===p.date);
+    const pt=PROFILE[i], pl=PROFILE[i-1], pr=PROFILE[i+1];
+    if(!pt||!pl||!pr)return;
+    // top edge = the crest's own segD quadratics, split via de Casteljau so the cap hugs the slope exactly
+    const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    const ctrl=(a,b)=>({x:(a.x+b.x)/2,y:Math.max(a.y,b.y)+3});
+    const cL=ctrl(pl,pt), cR=ctrl(pt,pr);
+    const DROP=13; // snow never reaches further than this below the summit
+    // left segment pl→pt: keep the sub-curve from t..1 (the stretch nearest the summit)
+    let tL=0.55,l1,r1,A;
+    do{l1=lerp(pl,cL,tL);r1=lerp(cL,pt,tL);A=lerp(l1,r1,tL);tL+=0.05;}while(A.y-pt.y>DROP&&tL<0.92);
+    // right segment pt→pr: keep the sub-curve from 0..t
+    let tR=0.45,l2,r2,B;
+    do{l2=lerp(pt,cR,tR);r2=lerp(cR,pr,tR);B=lerp(l2,r2,tR);tR-=0.05;}while(B.y-pt.y>DROP&&tR>0.08);
+    const dip=Math.max(6,Math.min(11,(Math.max(A.y,B.y)-pt.y)*0.6+6)); // snowline depth below the summit
+    const m1={x:(A.x+pt.x)/2,y:pt.y+dip}, m2={x:(pt.x+B.x)/2,y:pt.y+dip*0.8};
+    const f=v=>v.toFixed(1);
+    g+=`<path d="M ${f(A.x)} ${f(A.y)} Q ${f(r1.x)} ${f(r1.y)} ${f(pt.x)} ${f(pt.y)} Q ${f(l2.x)} ${f(l2.y)} ${f(B.x)} ${f(B.y)} Q ${f((B.x+m2.x)/2)} ${f(m2.y+2)} ${f(m2.x)} ${f(m2.y)} L ${f(m1.x)} ${f(m1.y)} Q ${f((A.x+m1.x)/2)} ${f(m1.y+2)} ${f(A.x)} ${f(A.y)} Z" fill="var(--snow)"/>`;
+  });
+
+  /* ---- Route-as-progress: one segment per day, filled by that day's completion ---- */
+  let routeAll="";
+  for(let i=0;i<PROFILE.length-1;i++) routeAll+=segD(PROFILE[i],PROFILE[i+1])+" ";
+  g+=`<path d="${routeAll}" fill="none" stroke="var(--trail)" stroke-width="1.5" stroke-dasharray="3 4" opacity=".8"/>`;
+  for(let i=0;i<PROFILE.length-1;i++){
+    const dday=DAYS[i];
+    const dn=dday.ids.filter(id=>done[id]).length;
+    const frac=dday.ids.length?dn/dday.ids.length:0;
+    if(frac>0) g+=`<path class="route-fill" data-frac="${frac}" d="${segD(PROFILE[i],PROFILE[i+1])}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/>`;
+  }
+  if(!panoDrawn) g+=`<path id="routeDraw" d="${routeAll}" fill="none" stroke="var(--trail)" stroke-width="2" opacity=".55"/>`;
+
+  /* camps at rest-day valleys: lit canvas tent + proper campfire at night */
+  DAYS.forEach((d,i)=>{
+    if(d.badge!=="rest")return;
+    const pt=PROFILE[i], past=dayDelta(d.date,TODAY)<0;
+    const tx=pt.x, ty=pt.y+1;
+    const fx=isDark?tx:tx+14, fy=ty;
+    g+=`<g opacity="${past?.6:1}">
+      ${isDark?"":`<path d="M ${tx-8} ${ty} L ${tx} ${ty-11} L ${tx+8} ${ty} Z" fill="#EDE2CC" stroke="rgba(40,28,16,.55)" stroke-width="1.1" stroke-linejoin="round"/>
+      <path d="M ${tx-2.6} ${ty} L ${tx} ${ty-6.5} L ${tx+2.6} ${ty} Z" fill="var(--accent)"/>`}
+      ${isDark?`
+      <circle cx="${fx}" cy="${fy-4.5}" r="11" fill="var(--accent)" opacity=".22"/>
+      <line x1="${fx-5}" y1="${fy}" x2="${fx+5}" y2="${fy-2.4}" stroke="rgba(40,28,16,.9)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="${fx-5}" y1="${fy-2.4}" x2="${fx+5}" y2="${fy}" stroke="rgba(40,28,16,.9)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M ${fx} ${fy-1.5} C ${fx-4.8} ${fy-4.8}, ${fx-3.6} ${fy-9.3}, ${fx} ${fy-12.9} C ${fx+3.6} ${fy-9.3}, ${fx+4.8} ${fy-4.8}, ${fx} ${fy-1.5} Z" fill="#F2A05C"/>
+      <path d="M ${fx} ${fy-2.1} C ${fx-2.2} ${fy-4.2}, ${fx-1.8} ${fy-6.6}, ${fx} ${fy-8.7} C ${fx+1.8} ${fy-6.6}, ${fx+2.2} ${fy-4.2}, ${fx} ${fy-2.1} Z" fill="#FFD9A0"/>`:""}
+      <title>Noah — Camp · ${d.date.slice(8)}.${d.date.slice(5,7)} rest day</title></g>`;
+  });
+
+  /* peak flags, labels, hit targets */
+  PEAKS.forEach(p=>{
+    const i=DAYS.findIndex(d=>d.date===p.date);
+    const pt=PROFILE[i]; if(!pt)return;
+    const px=pt.x, py=pt.y;
+    const examDef=EXAMS.find(e=>e.course===p.exam);
+    const exDt=examDef?new Date(examDef.date):new Date(p.date+"T23:59");
+    const examTask=ALL.find(t=>t.isExam&&t.date===p.date);
+    const climbed=examTask?!!done[examTask.id]:false;
+    const dl=Math.ceil((exDt-now)/864e5);
+    const soon=!climbed&&exDt>now&&dl<=3;
+    const flagC=climbed?"var(--green)":(p.nr?"var(--red)":"var(--flag-std)");
+    g+=`<g class="peak-hit" data-goto="${p.date}">
+      <line x1="${px}" y1="${py}" x2="${px}" y2="${py-18}" stroke="${flagC}" stroke-width="1.6"/>
+      <path d="M ${px} ${py-18} l 12 4 l -12 4 Z" fill="${flagC}"/>
+      <text class="peak-label" x="${px}" y="${py-26}" text-anchor="middle">${esc(p.label)}</text>
+      <text class="peak-days ${soon?'soon':''}" x="${px}" y="${py-41}" text-anchor="middle">${climbed?"✓":(exDt<now?"–":dl+"d")}</text>
+      <rect x="${px-32}" y="${py-56}" width="64" height="${56+(BASE-py)}" fill="transparent"><title>Noah — ${esc(p.full)} · ${WEEK[exDt.getDay()]} ${exDt.getDate()} ${MON[exDt.getMonth()]}${p.nr?" · no retake":""}</title></rect>
+    </g>`;
+  });
+
+  /* you-are-here: standing on the crest at today's elevation */
+  const ti=DAYS.findIndex(d=>d.date===TODAY);
+  if(ti>=0){
+    const pt=PROFILE[ti];
+    g+=`<g><circle cx="${pt.x}" cy="${pt.y}" r="5" fill="var(--accent)"/>
+      <circle cx="${pt.x}" cy="${pt.y}" r="9" fill="none" stroke="var(--accent)" stroke-width="1.4" opacity=".45"/>
+      <text x="${pt.x}" y="${Math.min(pt.y+26,BASE+14)}" text-anchor="middle" style="font-family:var(--mono);font-size:10px;font-weight:600" fill="${isDark?"var(--dim)":"var(--surface)"}">you are here</text></g>`;
+  }
+
+  svg.innerHTML=g;
+  /* per-day fill lengths: exact via getTotalLength once mounted */
+  svg.querySelectorAll(".route-fill").forEach(p=>{
+    const L=p.getTotalLength(), f=parseFloat(p.dataset.frac);
+    p.style.strokeDasharray=`${(L*f).toFixed(1)} ${(L+10).toFixed(1)}`;
+  });
+  /* one-time route draw-in on first load */
+  if(!panoDrawn){
+    panoDrawn=true;
+    const rd=document.getElementById("routeDraw");
+    if(rd&&!matchMedia("(prefers-reduced-motion: reduce)").matches){
+      const L=rd.getTotalLength();
+      rd.style.strokeDasharray=`${L} ${L}`;
+      rd.style.strokeDashoffset=L;
+      rd.style.transition="stroke-dashoffset 1.7s cubic-bezier(0.32,0.72,0,1)";
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{rd.style.strokeDashoffset="0";}));
+      setTimeout(()=>rd.remove(),2100);
+    } else if(rd) rd.remove();
+  }
+  svg.querySelectorAll(".peak-hit").forEach(el=>el.addEventListener("click",()=>{
+    const t=document.getElementById("day-"+el.dataset.goto);
+    if(t)t.scrollIntoView({behavior:"smooth",block:"center"});
+  }));
+}
+let resizeT;
+window.addEventListener("resize",()=>{clearTimeout(resizeT);resizeT=setTimeout(renderPano,150);});
+/* Scroll parallax on the backdrop ridges — transform-only, exits early once the pano is gone */
+let parallaxDone=false;
+window.addEventListener("scroll",()=>{
+  const y=window.scrollY;
+  if(y>600){ if(!parallaxDone){parallaxDone=true;} return; }
+  parallaxDone=false;
+  const far=document.getElementById("ridgeFar"), mid=document.getElementById("ridgeMid");
+  if(far) far.style.transform=`translateY(${(y*0.045).toFixed(1)}px)`;
+  if(mid) mid.style.transform=`translateY(${(y*0.022).toFixed(1)}px)`;
+},{passive:true});
+
+/* ---------- HERO ---------- */
+function renderHero(){
+  const now=new Date();
+  const next=EXAMS.map(e=>({...e,dt:new Date(e.date)})).filter(e=>e.dt>now).sort((a,b)=>a.dt-b.dt)[0];
+  const h=document.getElementById("heroNext");
+  if(!next){h.innerHTML=`All summits <span class="em">climbed</span>.`;return;}
+  const dl=Math.ceil((next.dt-now)/864e5);
+  const when=dl===0?"today":dl===1?"tomorrow":`in ${dl} days`;
+  h.innerHTML=`Next summit: ${esc(next.course)}, <span class="em">${when}</span>`;
+}
+
+/* ---------- STATS ---------- */
+function setRing(el,pct){const r=el.getAttribute("r"),c=2*Math.PI*r;el.style.strokeDasharray=c;el.style.strokeDashoffset=c*(1-pct/100);}
+function renderStats(){
+  const oT=ALL.length, oD=ALL.filter(t=>done[t.id]).length;
+  const pct=oT?Math.round(100*oD/oT):0;
+  setRing(document.getElementById("bigRing"),pct);
+  document.getElementById("bigPct").textContent=pct+"%";
+  document.getElementById("bigN").textContent=oD+" / "+oT+" tasks";
+  document.getElementById("dockPct").textContent=pct+"%";
+  let cc="";
+  Object.keys(COURSES).forEach(k=>{
+    const ts=ALL.filter(t=>t.course===k), dn=ts.filter(t=>done[t.id]).length;
+    const past=ts.filter(t=>dayDelta(t.date,TODAY)<0), pd=past.filter(t=>done[t.id]).length;
+    const p=ts.length?Math.round(100*dn/ts.length):0;
+    let f,l;
+    if(p===100){f="done";l="done";}else if(!past.length){f="neutral";l="not started";}
+    else if(pd<past.length){f="behind";l=(past.length-pd)+" behind";}else{f="ok";l="on track";}
+    cc+=`<div class="course"><div class="h"><span class="cn">${COURSES[k].name}${COURSES[k].retake?'':' <span class="dot"></span>'}</span><span class="flag ${f}">${l}</span></div><div class="pbar"><span style="width:${p}%"></span></div><div class="m"><span>${dn}/${ts.length}</span><span>${p}%</span></div></div>`;
+  });
+  document.getElementById("courses").innerHTML=cc;
+  renderPace();
+  renderCampNext();
+  renderPano();
+}
+
+/* pace: required vs actual tasks/day, projected finish */
+function renderPace(){
+  const el=document.getElementById("pace"); if(!el)return;
+  const icon=`<svg width="15" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M1 11 L6 4 L9 7 L15 1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const total=ALL.length, dn=ALL.filter(t=>done[t.id]).length, left=total-dn;
+  const daysLeft=Math.max(dayDelta("2026-08-07",TODAY)+1,1);
+  const daysIn=dayDelta(TODAY,"2026-07-06")+1;
+  const need=left/daysLeft, actual=dn/Math.max(daysIn,1);
+  if(!left){el.innerHTML=`${icon}<span>All ${total} tasks done — trail complete.</span>`;return;}
+  let proj="";
+  if(actual>0){
+    const eta=new Date(); eta.setDate(eta.getDate()+Math.ceil(left/actual));
+    proj=eta<=new Date("2026-08-07T23:59")?` · done <b>${WEEK[eta.getDay()]} ${eta.getDate()} ${MON[eta.getMonth()]}</b>`:` · finishing <b>after Aug 7</b>`;
+  }
+  el.innerHTML=`${icon}<span>Pace: <b>${actual.toFixed(1)}</b>/day · need <b>${need.toFixed(1)}</b>/day${proj}</span>`;
+}
+
+/* rest-day forecast under the big ring */
+function renderCampNext(){
+  const el=document.getElementById("campNext"); if(!el)return;
+  const tent=`<svg width="15" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M1 11 L8 1 L15 11 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.8 11 L8 7.5 L10.2 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+  const rests=DAYS.filter(d=>d.badge==="rest"&&dayDelta(d.date,TODAY)>=0);
+  if(!rests.length){el.innerHTML=`${tent}<span>No camps left — summit push to the end.</span>`;return;}
+  const nx=rests[0], dl=dayDelta(nx.date,TODAY), d=parseD(nx.date);
+  const when=dl===0?"today — rest up":dl===1?"tomorrow":`in ${dl} days`;
+  el.innerHTML=`${tent}<span>Next camp: <b>${WEEK[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}</b> · ${when}</span>`;
+}
+
+/* ---------- CATCH-UP ---------- */
+function renderCatchup(){
+  const p=document.getElementById("catchupPanel");
+  const missed=ALL.filter(t=>dayDelta(t.date,TODAY)<0&&!done[t.id]);
+  if(!missed.length){p.innerHTML=`<h3 class="panel-h">All caught up</h3><p class="panel-sub empty">No unchecked tasks from before today. The trail behind you is clean.</p>`;return;}
+  let h=`<h3 class="panel-h">${missed.length} carried over</h3><p class="panel-sub">Unchecked from earlier days. Clear them or consciously drop them.</p><ul class="catchlist">`;
+  missed.forEach(t=>{const d=parseD(t.date);
+    h+=`<li><button class="ccb" data-id="${t.id}"></button><span class="cdate">${WEEK[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}</span><span><b>${COURSES[t.course]?COURSES[t.course].name:t.course}</b> — ${esc(t.text)}</span></li>`;});
+  p.innerHTML=h+"</ul>";
+  p.querySelectorAll(".ccb").forEach(b=>b.addEventListener("click",e=>{
+    const btn=e.currentTarget, id=btn.dataset.id;
+    if(btn.classList.contains("on"))return;
+    btn.classList.add("on");
+    done[id]=true;save();syncTaskRow(id);renderStats();
+    setTimeout(()=>btn.closest("li").classList.add("clearing"),350);
+    setTimeout(()=>{renderCatchup();toast("Cleared — nice.");},800);
+  }));
+}
+
+/* ---------- NO-GO ---------- */
+function renderNogo(){
+  const el=document.getElementById("nogoList");el.innerHTML="";
+  if(!nogo.length){el.innerHTML=`<span class="empty">Nothing logged yet.</span>`;return;}
+  nogo.sort((a,b)=>b.count-a.count).forEach((n,i)=>{
+    const c=document.createElement("div");c.className="nogo";
+    c.innerHTML=`<span>${esc(n.text)}${n.count>1?` ·${n.count}`:''}</span><span class="x" data-i="${i}">×</span>`;
+    el.appendChild(c);});
+  el.querySelectorAll(".x").forEach(x=>x.addEventListener("click",e=>{nogo.splice(+e.target.dataset.i,1);saveNogo();renderNogo();}));
+}
+function addNogo(){
+  const inp=document.getElementById("nogoInput"),v=inp.value.trim();if(!v)return;
+  const ex=nogo.find(n=>n.text.toLowerCase()===v.toLowerCase());
+  if(ex)ex.count++;else nogo.push({text:v,count:1});
+  saveNogo();inp.value="";renderNogo();toast("Logged as a no-go.");
+}
+
+/* ---------- SURGICAL SYNC ---------- */
+function syncTaskRow(id){
+  const row=document.querySelector(`.task[data-tid="${CSS.escape(id)}"]`);
+  if(row) row.classList.toggle("done",!!done[id]);
+  const date=id.split("|")[0];
+  const shell=document.getElementById("day-"+date);
+  if(shell){
+    let tt=0,td=0;
+    shell.querySelectorAll(".task").forEach(r=>{tt++;if(done[r.dataset.tid])td++;});
+    shell.querySelector(".dp").textContent=td+"/"+tt;
+  }
+}
+function toggleTask(id){return;
+  if(done[id])delete done[id];else done[id]=true;
+  save();syncTaskRow(id);renderStats();renderCatchup();
+}
+
+/* ---------- PLAN ---------- */
+function renderPlan(){
+  const root=document.getElementById("plan");root.innerHTML="";
+  PHASES.forEach(p=>{
+    const parts=p.title.split("—");
+    const phasename=parts[1]?`${esc(parts[0].trim())} — <span class="em">${esc(parts[1].trim())}</span>`:esc(p.title);
+    root.insertAdjacentHTML("beforeend",`<div class="phase-h rv">${phasename}</div><div class="phase-sub rv">${esc(p.sub)}</div>`);
+    const wrap=document.createElement("div");wrap.className="days";
+    p.days.forEach(day=>{
+      const delta=dayDelta(day.date,TODAY),isToday=delta===0,isPast=delta<0;
+      const d=parseD(day.date);
+      let tt=0,td=0;day.blocks.forEach((b,bi)=>b.tasks.forEach((t,ti)=>{tt++;if(done[tid(day.date,bi,ti)])td++;}));
+      let badge="";
+      if(isToday)badge=`<span class="badge today">Today</span>`;
+      else if(day.badge==="power")badge=`<span class="badge power">Power day</span>`;
+      else if(day.badge==="exam")badge=`<span class="badge exam">Summit</span>`;
+      else if(day.badge==="rest")badge=`<span class="badge rest">Camp</span>`;
+      const shell=document.createElement("div");
+      shell.className="day-shell rv"+(isToday?" today":"")+(isPast?" past":"")+(day.badge==="exam"?" exam":"")+(day.badge==="power"?" power":"");
+      shell.id="day-"+day.date;
+      const collapsed=isPast&&ui.collapsedPast;
+      shell.innerHTML=`<div class="day"><div class="dh"><div class="dl"><span class="dow">${WEEK[d.getDay()]}</span><span class="dnum">${d.getDate()} ${MON[d.getMonth()]}</span>${badge}</div><div class="dp">${td}/${tt}</div></div><div class="db" ${collapsed?'style="display:none"':''}></div></div>`;
+      const body=shell.querySelector(".db");
+      day.blocks.forEach((b,bi)=>{
+        const isEx=b.chip==="EXAM";
+        const bl=document.createElement("div");
+        bl.innerHTML=`<div class="blk-l">${b.label}<span class="chip${isEx?" exam":""}">${isEx?"Summit":(COURSES[b.chip]?COURSES[b.chip].name:b.chip)}</span></div>`;
+        b.tasks.forEach((t,ti)=>{
+          const id=tid(day.date,bi,ti),isDone=!!done[id];
+          const row=document.createElement("div");
+          row.className="task"+(isDone?" done":"");
+          row.dataset.tid=id;
+          row.innerHTML=`<button class="cb" aria-label="toggle"></button><label class="${isEx?'exam-t':''}">${(t[2]&&t[2].group)?'<span class="gchip">Group</span>':''}${esc(t[1])}</label>`;
+          row.querySelector(".cb").addEventListener("click",()=>toggleTask(id));
+          row.querySelector("label").addEventListener("click",()=>toggleTask(id));
+          bl.appendChild(row);});
+        body.appendChild(bl);});
+      shell.querySelector(".dh").addEventListener("click",()=>{body.style.display=body.style.display==="none"?"":"none";});
+      wrap.appendChild(shell);});
+    root.appendChild(wrap);});
+  observeReveals();
+}
+
+/* ---------- REVEALS + TODAY ARROW ---------- */
+let obs;
+function observeReveals(){
+  if(obs)obs.disconnect();
+  obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");obs.unobserve(e.target);}}),{threshold:.06});
+  document.querySelectorAll(".rv:not(.in)").forEach(el=>obs.observe(el));
+  observeTodayDirection();
+}
+let dirObs;
+function observeTodayDirection(){
+  if(dirObs)dirObs.disconnect();
+  const el=document.getElementById("day-"+TODAY);
+  if(!el)return;
+  // rootMargin shrinks the observation zone to the horizontal midline of the screen:
+  // the arrow flips up exactly when today's card has passed above the middle.
+  dirObs=new IntersectionObserver(es=>es.forEach(e=>{
+    const above=!e.isIntersecting&&e.boundingClientRect.bottom<window.innerHeight/2;
+    document.getElementById("todayArrow").style.transform=above?"rotate(180deg)":"";
+  }),{rootMargin:"0px 0px -50% 0px",threshold:0});
+  dirObs.observe(el);
+}
+
+/* ---------- MISC ---------- */
+function tick(){const d=new Date();document.getElementById("clock").textContent=WEEK[d.getDay()]+", "+d.getDate()+" "+MON[d.getMonth()]+" "+d.getFullYear()+" · "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+let toastT;
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),1800);}
+document.getElementById("jumpToday").addEventListener("click",()=>{const el=document.getElementById("day-"+TODAY);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});else toast("Today isn't in the plan window.");});
+document.getElementById("collapsePast").addEventListener("click",()=>{ui.collapsedPast=true;saveUI();renderPlan();toast("Past days collapsed.");});
+document.getElementById("expandAll").addEventListener("click",()=>{ui.collapsedPast=false;saveUI();renderPlan();toast("All days expanded.");});
+document.getElementById("nogoAdd").addEventListener("click",addNogo);
+document.getElementById("nogoInput").addEventListener("keydown",e=>{if(e.key==="Enter")addNogo();});
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify({tasks:done,nogo,ui,exported:new Date().toISOString()},null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ss26-tracker-backup-"+todayStr()+".json";a.click();toast("Backup downloaded.");});
+document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);if(o.tasks)done=o.tasks;if(o.nogo)nogo=o.nogo;if(o.ui)ui=o.ui;
+    save();saveNogo();saveUI();applyTheme();renderHero();renderStats();renderCatchup();renderPlan();renderNogo();toast("Backup imported.");}catch(_){toast("Import failed — invalid file.");}};
+  r.readAsText(f);});
+
+/* ---------- INIT ---------- */
+applyTheme();tick();
+setInterval(()=>{tick();renderHero();renderPano();},60000);
+renderHero();renderStats();renderCatchup();renderPlan();renderNogo();
+window.addEventListener("load",()=>{const el=document.getElementById("day-"+TODAY);if(el)setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),500);});
+</script>
+</body>
+</html>
