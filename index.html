@@ -219,7 +219,7 @@
 <div class="ember" aria-hidden="true"></div>
 <div class="pano-wrap">
   <div class="pano-head">
-    <div class="kicker">Noah's expedition · Jul 6 to Aug 7 · updated 9 Jul, 19:15</div>
+    <div class="kicker">Noah's expedition · Jul 6 to Aug 7 · updated 11 Jul, 17:32</div>
     <h1 id="heroNext"></h1>
     <div class="sub" id="clock"></div>
   </div>
@@ -325,12 +325,12 @@ const PHASES = [
       {label:"Early AM", chip:"BILHR", tasks:[["BILHR","Final rehearsal before 10:00"]]},
       {label:"10:00", chip:"EXAM", tasks:[["BILHR","Deliver presentation (8 min + 2 min Q&A)"]]},
       {label:"PM", chip:"BILHR", tasks:[["BILHR","Begin the oral question bank: open Exam Question list, mark gaps, log every question-style hint the prof dropped"]]},
-      {label:"Eve", chip:"Robo", tasks:[["Robo","Kickoff: skim syllabus, L1 (new), start a running formula-sheet doc"]]},
+      {label:"Eve", chip:"Robo", tasks:[["Robo","AMintro session 1 (new, mandatory prep course) — formula sheet provided in exam, no sheet prep needed"]]},
     ]},
   ]},
   {title:"Phase 2 — BILHR oral + heavy-course kickoff", sub:"Jul 8–14 · no retake", days:[
     {date:"2026-07-08", badge:null, blocks:[
-      {label:"AM", chip:"Robo", tasks:[["Robo","Recap L1, L2 content (new)"]]},
+      {label:"AM", chip:"Robo", tasks:[["Robo","AMintro session 2 (new, mandatory prep course) — prep course complete"]]},
       {label:"PM", chip:"CogSys", tasks:[["CogSys","L1 recap (have), L2 content (new)"]]},
       {label:"Eve", chip:"BILHR", tasks:[["BILHR","Build question bank from L1–3 slides; draft answers for weakest areas (revisit)"]]},
     ]},
@@ -340,12 +340,12 @@ const PHASES = [
       {label:"Eve", chip:"BILHR", tasks:[["BILHR","Comb L6 (RL) & L7 slides; extract questions (revisit)"]]},
     ]},
     {date:"2026-07-10", badge:null, blocks:[
-      {label:"AM", chip:"Robo", tasks:[["Robo","L3 content (new) + first practice problems"]]},
+      {label:"AM", chip:"Robo", tasks:[["Robo","L1–2 content (2 new) + first practice problems"]]},
       {label:"PM", chip:"CogSys", tasks:[["CogSys","L3 content (new)"]]},
       {label:"Eve", chip:"BILHR", tasks:[["BILHR","Consolidate the full question bank; rehearse answers aloud (revisit)"]]},
     ]},
     {date:"2026-07-11", badge:null, blocks:[
-      {label:"AM", chip:"Robo", tasks:[["Robo","L4 content (new) + practice problems"]]},
+      {label:"AM", chip:"Robo", tasks:[["Robo","L3–4 content (2 new) + practice problems"]]},
       {label:"PM", chip:"CogSys", tasks:[["CogSys","L4–5 content (2 new)"]]},
       {label:"Eve", chip:"BILHR", tasks:[["BILHR","Pool everyone's notes + the prof's hints, collectively complete the question bank, compare expected question styles/format",{group:true}]]},
     ]},
@@ -375,12 +375,12 @@ const PHASES = [
       {label:"Eve", chip:"FFM", tasks:[["FFM","Keep-warm: one past-exam problem or exercise sheet"]]},
     ]},
     {date:"2026-07-17", badge:null, blocks:[
-      {label:"AM", chip:"CogSys", tasks:[["CogSys","L10–11 content (2 new)"]]},
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","L10–11 content (2 new) — content complete"]]},
       {label:"PM", chip:"CogSys", tasks:[["CogSys","Exercises (practice)"]]},
       {label:"Eve", chip:"Robo", tasks:[["Robo","L7 content (new) + a practice problem"]]},
     ]},
     {date:"2026-07-18", badge:null, blocks:[
-      {label:"AM", chip:"CogSys", tasks:[["CogSys","L12–13 content (2 new) — content complete"]]},
+      {label:"AM", chip:"CogSys", tasks:[["CogSys","Past exams / remaining tutorial exercises (practice — content already complete)"]]},
       {label:"PM", chip:"CogSys", tasks:[["CogSys","Past exams (if available) / consolidate summary (practice)"]]},
       {label:"Eve", chip:"Robo", tasks:[["Robo","Practice problems (revisit)"]]},
     ]},
@@ -441,7 +441,7 @@ const PHASES = [
   ]},
   {title:"Phase 5 — Roboterdynamik full push", sub:"Jul 30–Aug 4 · no retake, highest risk", days:[
     {date:"2026-07-30", badge:null, blocks:[
-      {label:"AM", chip:"Robo", tasks:[["Robo","L12–13 content (2 new) — content complete"]]},
+      {label:"AM", chip:"Robo", tasks:[["Robo","L12 content (new) — content complete"]]},
       {label:"PM", chip:"Robo", tasks:[["Robo","Practice problems (Lagrangian / dynamics) (practice)"]]},
       {label:"Eve", chip:"CV", tasks:[["CV","Kickoff: syllabus + L1 refresh (have), map the topic list (revisit)"]]},
     ]},
@@ -456,15 +456,15 @@ const PHASES = [
       {label:"Eve", chip:"CV", tasks:[["CV","L3 content (new), keep-warm"]]},
     ]},
     {date:"2026-08-02", badge:"rest", blocks:[
-      {label:"Light", chip:"Robo", tasks:[["Robo","Light review, formula-sheet memorization; rest"]]},
+      {label:"Light", chip:"Robo", tasks:[["Robo","Light review of weak topics; rest"]]},
     ]},
     {date:"2026-08-03", badge:null, blocks:[
       {label:"AM", chip:"Robo", tasks:[["Robo","Past exams, timed (practice)"]]},
-      {label:"PM", chip:"Robo", tasks:[["Robo","Weak-topic drilling, formula recall"]]},
+      {label:"PM", chip:"Robo", tasks:[["Robo","Weak-topic drilling, extra past-exam problems"]]},
       {label:"Eve", chip:"CV", tasks:[["CV","L4 content (new), keep-warm"]]},
     ]},
     {date:"2026-08-04", badge:"exam", blocks:[
-      {label:"AM", chip:"Robo", tasks:[["Robo","Final review, formula sheet"]]},
+      {label:"AM", chip:"Robo", tasks:[["Robo","Final review, key derivations (formula sheet provided)"]]},
       {label:"14:00", chip:"EXAM", tasks:[["Robo","Roboterdynamik exam (no retake)"]]},
       {label:"Eve", chip:"CV", tasks:[["CV","L5–6 content (2 new)"]]},
     ]},
@@ -472,12 +472,12 @@ const PHASES = [
   {title:"Phase 6 — 3D CV sprint", sub:"Aug 5–7 · retake Oct 6", days:[
     {date:"2026-08-05", badge:"power", blocks:[
       {label:"AM", chip:"CV", tasks:[["CV","L7–8 content (2 new): multiview reconstruction, super-resolution"]]},
-      {label:"PM", chip:"CV", tasks:[["CV","L9–10 content (2 new): free-viewpoint, realtime dense scanning"]]},
-      {label:"Eve", chip:"CV", tasks:[["CV","Tutorial exercises on L1–10 (practice)"]]},
+      {label:"PM", chip:"CV", tasks:[["CV","L9–10 content (2 new): free-viewpoint, realtime dense scanning — content complete"]]},
+      {label:"Eve", chip:"CV", tasks:[["CV","Tutorial exercises 1–4 of 8, on L1–10 (practice)"]]},
     ]},
     {date:"2026-08-06", badge:null, blocks:[
-      {label:"AM", chip:"CV", tasks:[["CV","L11–13 content (3 new): Visual SLAM, deep networks for SLAM"]]},
-      {label:"PM", chip:"CV", tasks:[["CV","Tutorial exercises + past exams (if available) (practice)"]]},
+      {label:"AM", chip:"CV", tasks:[["CV","Tutorial exercises 5–8 of 8 (practice — content already complete)"]]},
+      {label:"PM", chip:"CV", tasks:[["CV","Past exams (if available) / review exercise solutions (practice)"]]},
       {label:"Eve", chip:"CV", tasks:[["CV","Weak-topic review / consolidate"]]},
     ]},
     {date:"2026-08-07", badge:"exam", blocks:[
@@ -491,7 +491,7 @@ const PHASES = [
 
 /* ---------- STATE ---------- */
 const LS_TASKS="ss26_tasks_v1", LS_NOGO="ss26_nogo_v1", LS_UI="ss26_ui_v1";
-let done={"2026-07-06|0|0": true, "2026-07-06|1|0": true, "2026-07-06|2|0": true, "2026-07-07|0|0": true, "2026-07-07|1|0": true, "2026-07-07|2|0": true, "2026-07-07|3|0": true};
+let done={"2026-07-06|0|0": true, "2026-07-06|1|0": true, "2026-07-06|2|0": true, "2026-07-07|0|0": true, "2026-07-07|1|0": true, "2026-07-07|2|0": true, "2026-07-07|3|0": true, "2026-07-08|2|0": true};
 let nogo=[];
 let ui={};
 const save=()=>{};
