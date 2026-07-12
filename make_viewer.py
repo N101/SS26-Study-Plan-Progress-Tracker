@@ -59,6 +59,9 @@ sub("</style>", """
   #exportBtn,#importBtn,#collapsePast,#expandAll{display:none}
   .checkin{display:none}
 </style>""")
+# viewer opens at the top (stats + overall progress); the private tracker keeps its autoscroll-to-today
+sub('window.addEventListener("load",()=>{const el=document.getElementById("day-"+TODAY);if(el)setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),500);});',
+    "/* viewer: no autoscroll-to-today — open at the top */")
 sub('<div class="kicker">Expedition · Jul 6 to Aug 7</div>',
     f"<div class=\"kicker\">Noah's expedition · Jul 6 to Aug 7 · updated {stamp}</div>")
 sub("<title>", "<title>Noah — ")

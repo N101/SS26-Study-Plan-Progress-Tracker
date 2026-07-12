@@ -219,7 +219,7 @@
 <div class="ember" aria-hidden="true"></div>
 <div class="pano-wrap">
   <div class="pano-head">
-    <div class="kicker">Noah's expedition · Jul 6 to Aug 7 · updated 12 Jul, 14:20</div>
+    <div class="kicker">Noah's expedition · Jul 6 to Aug 7 · updated 12 Jul, 14:27</div>
     <h1 id="heroNext"></h1>
     <div class="sub" id="clock"></div>
   </div>
@@ -973,7 +973,7 @@ document.getElementById("importFile").addEventListener("change",e=>{
 applyTheme();tick();
 setInterval(()=>{tick();renderHero();renderPano();},60000);
 renderHero();renderStats();renderCatchup();renderPlan();renderNogo();
-window.addEventListener("load",()=>{const el=document.getElementById("day-"+TODAY);if(el)setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),500);});
+/* viewer: no autoscroll-to-today — open at the top */
 </script>
 </body>
 </html>
